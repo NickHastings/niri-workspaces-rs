@@ -93,7 +93,7 @@ fn output_status(workspaces: &[Workspace], windows: &[Window]) {
             .filter(|w| w.workspace_id == Some(ws.id))
             .collect();
 
-        ws_windows.sort_by_key(|w| w.id);
+        ws_windows.sort_by_key(|win| window_sort_key(*win));
 
         let win_count = ws_windows.len();
         tooltip.push_str(&format!("ws{}: {} windows\\n", ws.idx, win_count));
@@ -129,7 +129,15 @@ fn output_status(workspaces: &[Workspace], windows: &[Window]) {
                     "|"
                 };
 
-                output.push_str(&format!("<span color='{}'>{}</span>", color, bar));
+                let strike = if ws.is_active {
+                    " strikethrough=\"true\""
+                } else {
+                    ""
+                };
+                output.push_str(&format!(
+                    "<span color='{}'{}>{}</span>",
+                    color, strike, bar
+                ));
             }
             output
         };
@@ -267,4 +275,13 @@ fn dim_color(hex: &str) -> String {
     let b = ((b as u32 * 6 / 10) + 30).min(255) as u8;
 
     format!("#{:02x}{:02x}{:02x}", r, g, b)
+}
+
+fn window_sort_key(win: &Window) -> (u8, u64, u64, u64) {
+    if let Some((col, row)) = win.layout.pos_in_scrolling_layout {
+        (0, col as u64, row as u64, win.id)
+    } else {
+        // Floating/unknown layout windows go after tiled windows.
+        (1, 0, 0, win.id)
+    }
 }
