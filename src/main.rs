@@ -130,7 +130,7 @@ fn output_status(workspaces: &[Workspace], windows: &[Window]) {
                 };
 
                 let strike = if ws.is_active {
-                    " strikethrough=\"true\""
+                    " strikethrough='true'"
                 } else {
                     ""
                 };
