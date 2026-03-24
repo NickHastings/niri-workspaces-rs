@@ -85,7 +85,7 @@ fn output_status(workspaces: &[Workspace], windows: &[Window]) {
         .filter_map(|w| {
             let pid = w.pid?;
             let app_id = w.app_id.as_deref().unwrap_or("");
-            if (app_id == "foot" || app_id == "footclient")
+            if (app_id == "foot" || app_id == "footclient" || app_id == "kitty")
                 && pid_counts.get(&pid).copied().unwrap_or(0) > 1
             {
                 return None;
@@ -119,10 +119,13 @@ fn output_status(workspaces: &[Workspace], windows: &[Window]) {
         let ws_name = ws.name.as_deref().unwrap_or("");
         let has_custom_name = !ws_name.is_empty();
 
-        if has_custom_name {
-            tooltip.push_str(&format!("{}: {} windows\\n", ws_name, win_count));
-        } else {
-            tooltip.push_str(&format!("ws{}: {} windows\\n", ws.idx, win_count));
+        // Only add to tooltip if workspace has windows
+        if win_count > 0 {
+            if has_custom_name {
+                tooltip.push_str(&format!("{}: {} windows\\n", ws_name, win_count));
+            } else {
+                tooltip.push_str(&format!("ws{}: {} windows\\n", ws.idx, win_count));
+            }
         }
 
         // Skip empty unfocused workspaces entirely
@@ -131,12 +134,8 @@ fn output_status(workspaces: &[Workspace], windows: &[Window]) {
         }
 
         let ws_output = if win_count == 0 {
-            // Empty but focused
-            if has_custom_name {
-                format!("<span color='#888888'>{}</span>", ws_name)
-            } else {
-                "<span color='#888888'>·</span>".to_string()
-            }
+            // Empty but focused - just show a dot, no name
+            "<span color='#888888'>·</span>".to_string()
         } else {
             let mut output = String::new();
 
@@ -227,12 +226,16 @@ fn is_claude_title(title: &str) -> bool {
 fn detect_terminal_app(pid: u32) -> &'static str {
     let mut found_claude = false;
     let mut found_codex = false;
+    let mut found_jcode = false;
     let mut found_nvim = false;
 
     if let Ok(children) = get_all_descendants(pid) {
         for child_pid in children {
             if let Ok(cmdline) = fs::read_to_string(format!("/proc/{}/cmdline", child_pid)) {
                 let cmdline = cmdline.to_lowercase();
+                if cmdline.contains("jcode") {
+                    found_jcode = true;
+                }
                 if cmdline.contains("claude") {
                     found_claude = true;
                 }
@@ -246,7 +249,9 @@ fn detect_terminal_app(pid: u32) -> &'static str {
         }
     }
 
-    if found_claude {
+    if found_jcode {
+        "jcode"
+    } else if found_claude {
         "claude"
     } else if found_codex {
         "codex"
@@ -276,11 +281,18 @@ fn get_all_descendants(pid: u32) -> std::io::Result<Vec<u32>> {
     Ok(descendants)
 }
 
-fn get_color(app_id: &str, title: &str, pid: Option<i32>, terminal_apps: &HashMap<i32, &str>) -> String {
+fn get_color(
+    app_id: &str,
+    title: &str,
+    pid: Option<i32>,
+    terminal_apps: &HashMap<i32, &str>,
+) -> String {
     if is_terminal(app_id) {
         let title_lower = title.to_lowercase();
 
-        if is_claude_title(title) {
+        if title_lower.contains("jcode") {
+            return "#999999".to_string();
+        } else if is_claude_title(title) {
             return "#f5a623".to_string();
         } else if title_lower.contains("codex") {
             return "#56b6c2".to_string();
@@ -291,6 +303,7 @@ fn get_color(app_id: &str, title: &str, pid: Option<i32>, terminal_apps: &HashMa
         if let Some(pid) = pid {
             if let Some(&app) = terminal_apps.get(&pid) {
                 return match app {
+                    "jcode" => "#999999",
                     "claude" => "#f5a623",
                     "codex" => "#56b6c2",
                     "nvim" => "#98c379",

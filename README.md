@@ -2,14 +2,20 @@
 
 A fast, event-driven workspace indicator for [Waybar](https://github.com/Alexays/Waybar) and [niri](https://github.com/YaLTeR/niri).
 
+<img width="2880" height="1800" alt="image" src="https://github.com/user-attachments/assets/45c689b4-2c0d-4faf-8033-e34341cad8c2" />
+
 ## Features
 
-- **Visual bars** instead of numbers - each window is a colored bar
-- **Color-coded by app** - Chrome (Google colors), Discord (purple), Firefox (orange), nvim (green), Claude (orange), Codex (cyan)
-- **Terminal app detection** - detects Claude/Codex/nvim running inside terminals via /proc
-- **Focused window indicator** - █ for focused, ▌ for would-be-focused, | for others
-- **Dimmed unfocused workspaces** - colors are dimmed when workspace isn't focused
-- **Daemon mode** - persistent socket connection, no process spawning
+- **Visual bars instead of numbers** — each window is rendered as a colored bar.
+- **Event-driven daemon mode** — keeps a persistent niri socket connection and emits JSON updates only when workspace/window state changes.
+- **App-aware coloring** — built-in colors for Chrome, Firefox, Discord/Vesktop, Spotify, Todoist, Gmail, and terminals.
+- **Terminal app detection via `/proc`** — detects `jcode`, Claude, Codex, and Neovim/Vim running inside terminal windows.
+- **Terminal support** — works with Alacritty, Kitty, Ghostty, Foot, and Footclient.
+- **Focus semantics** — uses `█` for the focused window, `▌` for the active window on an unfocused workspace, and `|` for other windows.
+- **tmux hinting** — uses `¦` for non-focused tmux windows.
+- **Cleaner empty workspace handling** — unfocused empty workspaces are hidden; a focused empty workspace is shown as a dim `·`.
+- **Named workspace support** — shows the custom workspace name when that workspace is focused; tooltips include only non-empty workspaces.
+- **Safer terminal PID detection** — skips `/proc` descendant inference for shared terminal PIDs in cases that can otherwise cause false positives.
 
 ## Benchmarks
 
@@ -36,17 +42,19 @@ cargo build --release
 cp target/release/niri-workspaces ~/.config/waybar/
 ```
 
+If Waybar is already running, restart Waybar or reload the module so the new binary is picked up.
+
 ## Waybar Configuration
 
 ```json
 "custom/workspaces": {
-    "exec": "/home/user/.config/waybar/niri-workspaces",
+    "exec": "~/.config/waybar/niri-workspaces",
     "return-type": "json",
     "format": "{}"
 }
 ```
 
-No `interval` or `signal` needed - the daemon outputs JSON whenever workspace/window events occur.
+No `interval` or `signal` is needed — the daemon outputs JSON whenever relevant niri events occur.
 
 ## License
 
